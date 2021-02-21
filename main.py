@@ -20,7 +20,7 @@ class Group:
         self.participants.append(participant)
     
     def get_info(self):
-        return self.participants
+        return "\n".join(i.get_info() for i in self.participants)
 
 
 
@@ -35,7 +35,7 @@ class Contact:
         self.ed_place = options['ed_place']
 
     def get_info(self):
-        return f"""Contact name: {self.name}\n\tnumber: {self.number}\n\tProfession: {self.profession}\n\tRank: {self.rank}\n\tEd. place {self.ed_place}\n\tOld: {self.old}\n\tTrack: {self.track}"""
+        return f"""Contact name: {self.name}\n    number: {self.number}\n    Profession: {self.profession}\n    Rank: {self.rank}\n    Ed. place: {self.ed_place}\n    Old: {self.old}\n    Track: {self.track}"""
 
 
 names = {'Zelimkhan': {'number':'89991429243',
@@ -77,42 +77,25 @@ groups.append(innovatorsh)
 
 status_of_printing_info = True
 markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-markup.add(telebot.types.KeyboardButton('😄 Рандомное число!'))
+markup.add(telebot.types.KeyboardButton('Просмотреть все группы.', ))
+markup.add(telebot.types.KeyboardButton('Добавить группу.'))
+markup.add(telebot.types.KeyboardButton('Редактировать группу.'))
 current_group = None
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
     bot.send_message(message.chat.id, f'''Здравствуй {message.from_user.first_name}.\n
-Я бот для рассылки сообщений.''')
-
-@bot.message_handler(commands=['groups'])
-def group_description(message):
-    global current_group
-    bot.send_message(message.chat.id, 'Выберите действие!', reply_markup=markup)
-    
-    bot.send_message(message.chat.id, 'Введите название группы')
-    status_of_printing_info = True
-    if current_group:
-        for tel in current_group:
-            bot.send_message(message.chat.id, tel.get_info())
-        current_group = None
-        status_of_printing_info = False
+Я бот для рассылки сообщений.''', reply_markup=markup)
 
 @bot.message_handler(content_types=['text'])
 def send_message(message):
     global current_group
     global status_of_printing_info
-    if message.text == '😄 Рандомное число!':
-        bot.send_message(message.chat.id, random.randint(0, 100))
-    if status_of_printing_info:
+    if message.text == 'Просмотреть все группы.':
         for group in groups:
-            if group.name == message.text:
-                current_group = group 
-        bot.send_message(message.chat.id, f'Name of group: {current_group.name}')
-        for tel in current_group.participants:
-            bot.send_message(message.chat.id, tel.get_info())
-        current_group = None
-        status_of_printing_info = False
+            bot.send_message(message.chat.id, f"Group name: {group.name}")
+            bot.send_message(message.chat.id, group.get_info())
+
 
 
 bot.polling()
