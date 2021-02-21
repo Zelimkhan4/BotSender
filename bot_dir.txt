@@ -1,0 +1,11 @@
+{'game_short_name': None, 'chat_instance': '-2659374332630491060', 'id': '3646214564470535852', 'from_user': {'id': 848950483, 'is_bot': False, 'first_name': 'Тот кто вам нужен',
+ 'username': 'ZelimhanGuchiev', 'last_name': None, 'language_code': 'ru', 'can_join_groups': None, 'can_read_all_group_messages': None, 'supports_inline_queries': None},
+  'message': {'content_type': 'text', 'id': 629, 'message_id': 629, 'from_user': <telebot.types.User object at 0x04455BE0>, 'date': 1613924520, 'chat': <telebot.types.Chat object at 0x04469D60>,
+   'forward_from': None, 'forward_from_chat': None, 'forward_from_message_id': None, 'forward_signature': None, 'forward_sender_name': None, 'forward_date': None, 'reply_to_message': None,
+    'edit_date': None, 'media_group_id': None, 'author_signature': None, 'text': 'Выберите одну из групп:', 'entities': None, 'caption_entities': None, 'audio': None, 'document': None, 'photo': None,
+     'sticker': None, 'video': None, 'video_note': None, 'voice': None, 'caption': None, 'contact': None, 'location': None, 'venue': None, 'animation': None, 'dice': None, 'new_chat_member': None,
+      'new_chat_members': None, 'left_chat_member': None, 'new_chat_title': None, 'new_chat_photo': None, 'delete_chat_photo': None, 'group_chat_created': None, 'supergroup_chat_created': None,
+       'channel_chat_created': None, 'migrate_to_chat_id': None, 'migrate_from_chat_id': None, 'pinned_message': None, 'invoice': None, 'successful_payment': None, 'connected_website': None,
+        'reply_markup': <telebot.types.InlineKeyboardMarkup object at 0x04469970>, 'json': {'message_id': 629, 'from': {'id': 1115601017, 'is_bot': True, 'first_name': 'PigeonMailBot',
+         'username': 'ZELAMHIN_BOT'}, 'chat': {'id': 848950483, 'first_name': 'Тот кто вам нужен', 'username': 'ZelimhanGuchiev', 'type': 'private'}, 'date': 1613924520, 'text': 'Выберите одну из групп:',
+ 'reply_markup': {'inline_keyboard': [[{'text': 'All', 'callback_data': 'groups_list'}], [{'text': 'Innovators', 'callback_data': 'groups_list'}]]}}}, 'data': 'groups_list', 'inline_message_id': None}

@@ -8,7 +8,7 @@ bot = telebot.TeleBot(config.apikey)
 
 
 groups = []
-
+group_id = None
 
 class Group:
     def __init__(self, name, participants):
@@ -84,18 +84,33 @@ current_group = None
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
+    global group_id
+    group_id = message.chat.id
     bot.send_message(message.chat.id, f'''Здравствуй {message.from_user.first_name}.\n
 Я бот для рассылки сообщений.''', reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: True)
+def print_group_info(call):
+    for group in groups:
+        if call.data == group.name:
+            bot.send_message(call.chat_instance, group.get_info)
+            break
 
 @bot.message_handler(content_types=['text'])
 def send_message(message):
     global current_group
     global status_of_printing_info
+    markup = telebot.types.InlineKeyboardMarkup()
     if message.text == 'Просмотреть все группы.':
         for group in groups:
-            bot.send_message(message.chat.id, f"Group name: {group.name}")
-            bot.send_message(message.chat.id, group.get_info())
-
+            button = telebot.types.InlineKeyboardButton(text=group.name, callback_data=group.name)
+            markup.add(button)
+        bot.send_message(message.chat.id, f'Выберите одну из групп:', reply_markup=markup)
+            
+    if message.text == "Добавить группу.":
+        bot.send_message(message.chat.id, 'Отлично введи название группы')
+    if message.text == 'Редактировать группу.':
+	    bot.send_message(message.chat.id, "Выбери группу которую хочешь отредактировать.")
 
 
 bot.polling()
