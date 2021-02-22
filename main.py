@@ -18,9 +18,9 @@ class Group:
 
     def add_participant(self, participant):
         self.participants.append(participant)
-    
+
     def get_info(self):
-        return "\n".join(i.get_info() for i in self.participants)
+        return  'Name of group: ' + self.name + '\n' + "\n".join(i.get_info() for i in self.participants)
 
 
 
@@ -41,7 +41,7 @@ class Contact:
 names = {'Zelimkhan': {'number':'89991429243',
                          'profession': 'Programmer',
                          'rank': 0,
-                         'track': 'Innovator', 
+                         'track': 'Innovator',
                          'ed_place': 'shkola',
                          'old': 3000},
         'Aishat': {'number': '89282690871',
@@ -59,7 +59,7 @@ names = {'Zelimkhan': {'number':'89991429243',
         "Deni": {'number': '89383526230',
                          'profession': 'Project Manager',
                          'rank': 4,
-                         'track': 'Proektirovshik', 
+                         'track': 'Proektirovshik',
                          'old': 21,
                          'ed_place': 'shkola'}}
 
@@ -89,12 +89,22 @@ def start_message(message):
     bot.send_message(message.chat.id, f'''Здравствуй {message.from_user.first_name}.\n
 Я бот для рассылки сообщений.''', reply_markup=markup)
 
+
 @bot.callback_query_handler(func=lambda call: True)
 def print_group_info(call):
     for group in groups:
-        if call.data == group.name:
-            bot.send_message(call.chat_instance, group.get_info)
+        if call.data == 'view_' + group.name:
+            bot.send_message(call.message.chat.id, group.get_info())
             break
+        elif call.data == 'edit_' + group.name:
+            markup = telebot.types.ReplyKeyboardMarkup()
+            features = ['Add member', 'Remove member', 'Edit member']
+            for f in features:
+                button = telebot.types.InlineKeyboardButton(f, callback_data='edit_' + f + group.name)
+                markup.add(button)
+            bot.send_message(call.message.chat.id, 'Что вы хотите сделать?', reply_markup=markup)
+
+
 
 @bot.message_handler(content_types=['text'])
 def send_message(message):
@@ -103,14 +113,18 @@ def send_message(message):
     markup = telebot.types.InlineKeyboardMarkup()
     if message.text == 'Просмотреть все группы.':
         for group in groups:
-            button = telebot.types.InlineKeyboardButton(text=group.name, callback_data=group.name)
+            button = telebot.types.InlineKeyboardButton(text=group.name, callback_data='view_' + group.name)
             markup.add(button)
         bot.send_message(message.chat.id, f'Выберите одну из групп:', reply_markup=markup)
-            
+
     if message.text == "Добавить группу.":
         bot.send_message(message.chat.id, 'Отлично введи название группы')
     if message.text == 'Редактировать группу.':
-	    bot.send_message(message.chat.id, "Выбери группу которую хочешь отредактировать.")
+        for group in groups:
+            button = telebot.types.InlineKeyboardButton(text=group.name, callback_data='edit_' + group.name)
+            markup.add(button)
+        bot.send_message(message.chat.id, "Выбери группу которую хочешь отредактировать.", reply_markup=markup)
 
 
-bot.polling()
+if __name__ == '__main__':
+    bot.polling()
