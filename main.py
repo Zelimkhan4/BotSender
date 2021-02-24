@@ -1,11 +1,10 @@
 import telebot
 import config
-import pprint
-import random
+from db_control import add_new_row
+import sqlite3
 
 
 bot = telebot.TeleBot(config.apikey)
-
 
 groups = []
 group_id = None
@@ -14,7 +13,6 @@ class Group:
     def __init__(self, name, participants):
         self.name = name
         self.participants = participants
-        print(self.participants)
 
     def add_participant(self, participant):
         self.participants.append(participant)
@@ -77,14 +75,26 @@ groups.append(innovatorsh)
 
 status_of_printing_info = True
 markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-markup.add(telebot.types.KeyboardButton('Просмотреть все группы.', ))
-markup.add(telebot.types.KeyboardButton('Добавить группу.'))
-markup.add(telebot.types.KeyboardButton('Редактировать группу.'))
+markup.add(telebot.types.KeyboardButton('Просмотреть все группы', ))
+markup.add(telebot.types.KeyboardButton('Добавить группу'))
+markup.add(telebot.types.KeyboardButton('Редактировать группу'))
 current_group = None
+
+
+@bot.message_handler(commands=['send_all'])
+def send_all_messages(message):
+    con = sqlite3.connect('TeleBotDB.db')
+    cur = con.cursor()
+    ids = cur.execute('''SELECT ChatId FROM Residents''').fetchall()
+    for id in ids:
+        bot.send_message(id[0], 'Hello world')   
 
 @bot.message_handler(commands=['start'])
 def start_message(message):
     global group_id
+    con = sqlite3.connect('TeleBotDB.db')
+    cur = con.cursor()
+    add_new_row(message.from_user.username, message.chat.id)
     group_id = message.chat.id
     bot.send_message(message.chat.id, f'''Здравствуй {message.from_user.first_name}.\n
 Я бот для рассылки сообщений.''', reply_markup=markup)
@@ -108,22 +118,22 @@ def print_group_info(call):
 
 @bot.message_handler(content_types=['text'])
 def send_message(message):
-    global current_group
-    global status_of_printing_info
     markup = telebot.types.InlineKeyboardMarkup()
-    if message.text == 'Просмотреть все группы.':
+    if message.text == 'Просмотреть все группы':
         for group in groups:
             button = telebot.types.InlineKeyboardButton(text=group.name, callback_data='view_' + group.name)
             markup.add(button)
+
+
         bot.send_message(message.chat.id, f'Выберите одну из групп:', reply_markup=markup)
 
-    if message.text == "Добавить группу.":
+    if message.text == "Добавить группу":
         bot.send_message(message.chat.id, 'Отлично введи название группы')
-    if message.text == 'Редактировать группу.':
+    if message.text == 'Редактировать группу':
         for group in groups:
             button = telebot.types.InlineKeyboardButton(text=group.name, callback_data='edit_' + group.name)
             markup.add(button)
-        bot.send_message(message.chat.id, "Выбери группу которую хочешь отредактировать.", reply_markup=markup)
+        bot.send_message(message.chat.id, "Выбери группу которую хочешь отредактировать", reply_markup=markup)
 
 
 if __name__ == '__main__':
