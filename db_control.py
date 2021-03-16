@@ -2,6 +2,9 @@ import sqlite3
 import json
 
 
+def get_data(request):
+    with sqlite3.connect("TelebotDB.db") as db:
+        return db.execute(request)
 
 
 
@@ -18,3 +21,6 @@ def add_new_row(username, chat_id):
         ''')
     con.commit()
     con.close()
+
+
+
