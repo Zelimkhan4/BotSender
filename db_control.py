@@ -7,6 +7,9 @@ def get_data(request):
         return db.execute(request)
 
 
+def get_tracks_name():
+    with sqlite3.connect("TeleBotDB.db") as db:
+        return db.execute("SELECT name from Tracks").fetchall()
 
 def add_new_row(username, chat_id):
     con = sqlite3.connect('TeleBotDB.db')

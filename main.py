@@ -1,6 +1,6 @@
 import telebot
 import config
-from db_control import add_new_row, get_data
+from db_control import add_new_row, get_data, get_tracks_name
 import sqlite3
 
 
@@ -55,38 +55,43 @@ class Contact:
 
     def name_handler(self, message):
         self.name = message.text
-        msg = bot.reply_to(message, "Введите свою фамилию")
+        msg = bot.send_message(message.chat.id, "Введите свою фамилию")
         bot.register_next_step_handler(msg, self.surname_handler)
 
     def surname_handler(self, message):
         self.surname = message.text
-        msg = bot.reply_to(message, "Введите свой возраст")
+        msg = bot.send_message(message.chat.id, "Введите свой возраст")
         bot.register_next_step_handler(msg, self.age_handler)
     
     def age_handler(self, message):
         self.old = message.text
-        msg = bot.reply_to(message, "Введите свой трек")
+        tracks = get_tracks_name()
+        mark = telebot.types.InlineKeyboardMarkup(row_width=len(tracks))
+        print(tracks)
+        for i in tracks:
+            mark.add(telebot.types.InlineKeyboardButton(i[0], callback_data=i[0]))
+        msg = bot.send_message(message.chat.id, "Введите свой трек", reply_markup=mark)
         bot.register_next_step_handler(msg, self.track_handler)
 
     def track_handler(self, message):
         self.track = message.text
-        msg = bot.reply_to(message, "Введите вашу специализацию")
+        msg = bot.send_message(message.chat.id, "Введите вашу специализацию")
         bot.register_next_step_handler(msg, self.role_handler)
 
     def role_handler(self, message):
         self.role = message.text
-        msg = bot.reply_to(message, "Введите ваше место обучения")
+        msg = bot.send_message(message.chat.id, "Введите ваше место обучения")
         bot.register_next_step_handler(msg, self.ed_handler)
     
     def ed_handler(self, message):
         self.ed_place = message.text
         bot.send_message(message.chat.id, "Регистрация окончена товарищ")
-        self.create_new_contact(message)
+        self.add_new_row(message)
 
-    def create_new_contact(self, message):
+    def add_new_row(self, message):
         con = sqlite3.connect("TelebotDB.db")
         print(self.name, self.surname, self.old, self.ed_place, self.role, self.rank)
-        con.execute(f"""INSERT INTO Residents ('username', 'chatid', 'name', 'surname', 'old', 'track', 'role', ed_place)
+        con.execute(f"""INSERT INTO Residents ('username', 'chatid', 'name', 'surname', 'old', 'track', 'role', 'ed_place')
                         VALUES ('{message.from_user.username}', '{message.chat.id}', '{self.name}', '{self.surname}', {self.old}, '{self.track}', '{self.role}', '{self.ed_place}')""")
         con.commit()
 
@@ -120,6 +125,10 @@ class Contact:
 
 
 
+@bot.callback_query_handler(func=lambda call: True)
+def handle_button(call):
+    bot.send_message(call.message.chat.id, call.data)
+    
 
 @bot.message_handler(commands=['send_all'])
 def send_all_messages(message):
@@ -130,6 +139,8 @@ def send_all_messages(message):
         bot.send_message(id[0], 'Hello world')   
 
 
+
+
 # Обработчик start
 # C него начинаем наш опрос
 @bot.message_handler(commands=['start'])
@@ -138,44 +149,15 @@ def start_message(message):
     bot.send_message(message.chat.id, f'''Здравствуй {message.from_user.first_name}.\n
 Я бот для рассылки сообщений.''', reply_markup=bot.markup)
     if not get_data(f"""SELECT chatid from Residents WHERE username = '{message.from_user.username}'""").fetchall():  
-        msg = bot.reply_to(message, "Введи своё имя")
+        msg = bot.send_message(message.chat.id, "Введи своё имя")
         bot.register_next_step_handler(msg, user.name_handler)
 
-@bot.callback_query_handler(func=lambda call: True)
-def print_group_info(call):
-    # for group in groups:
-    #     if call.data == 'view_' + group.name:
-    #         bot.send_message(call.message.chat.id, group.get_info())
-    #         break
-    #     elif call.data == 'edit_' + group.name:
-    #         markup = telebot.types.ReplyKeyboardMarkup()
-    #         features = ['Add member', 'Remove member', 'Edit member']
-    #         for f in features:
-    #             button = telebot.types.InlineKeyboardButton(f, callback_data='edit_' + f + group.name)
-    #             markup.add(button)
-    #         bot.send_message(call.message.chat.id, 'Что вы хотите сделать?', reply_markup=markup)
-    bot.send_message('send_to')
 
 
-@bot.message_handler(content_types=['text'])
-def send_message(message):
-    # markup = telebot.types.InlineKeyboardMarkup()
-    # if message.text == 'Просмотреть все группы':
-    #     for group in groups:
-    #         button = telebot.types.InlineKeyboardButton(text=group.name, callback_data='view_' + group.name)
-    #         markup.add(button)
 
-
-    #     bot.send_message(message.chat.id, f'Выберите одну из групп:', reply_markup=markup)
-
-    # if message.text == "Добавить группу":
-    #     bot.send_message(message.chat.id, 'Отлично введи название группы')
-    # if message.text == 'Редактировать группу':
-    #     for group in groups:
-    #         button = telebot.types.InlineKeyboardButton(text=group.name, callback_data='edit_' + group.name)
-    #         markup.add(button)
-    #     bot.send_message(message.chat.id, "Выбери группу которую хочешь отредактировать", reply_markup=markup)
-    bot.send_message(message.chat.id, "send_to")
+# @bot.message_handler(content_types=['text'])
+# def send_message(message):
+#     bot.send_message(message.chat.id, "send_to")
 
 if __name__ == '__main__':
     bot.polling()
