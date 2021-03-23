@@ -1,9 +1,6 @@
 import sqlite3
 
 
-
-con = sqlite3.connect("TeleBotDB.db")
-cur = con.cursor()
-cur.execute(f"""DELETE FROM Residents""")
-con.commit()
-con.close()
+db = sqlite3.connect('TeleBotDB.db')
+db.execute('DELETE from Residents')
+db.commit()
