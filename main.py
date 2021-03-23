@@ -1,16 +1,13 @@
 import telebot
+from telebot import types
 import config
-from db_control import add_new_row, get_data, get_tracks_name
+from db_control import *
 import sqlite3
+from utils import generate_markup, generate_base_markup
 
 
 
-# Базовая клавиатура для бота
-base_markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
-base_markup.add(telebot.types.KeyboardButton('Просмотреть все группы', ))
-base_markup.add(telebot.types.KeyboardButton('Добавить группу'))
-base_markup.add(telebot.types.KeyboardButton('Редактировать группу'))
-
+id_s = None
 
 # Класс бота
 class Bot(telebot.TeleBot):
@@ -18,12 +15,13 @@ class Bot(telebot.TeleBot):
         super().__init__(apikey)
         self.name = "бот для рассылки"
         self.creator = "Last Dark Emperor of Galactic Empire"
-        self.markup = base_markup
+        self.markup = generate_base_markup()
         self.con = sqlite3.connect("TelebotDB.db")
         self.data = {}
     
 
 bot = Bot(config.apikey)
+
 
 # Класс группы
 class Group:
@@ -36,7 +34,6 @@ class Group:
 
     def get_info(self):
         return  'Name of group: ' + self.name + '\n' + "\n".join(i.get_info() for i in self.participants)
-
 
 
 class Contact:
@@ -66,16 +63,16 @@ class Contact:
     def age_handler(self, message):
         self.old = message.text
         tracks = get_tracks_name()
-        mark = telebot.types.InlineKeyboardMarkup(row_width=len(tracks))
         print(tracks)
-        for i in tracks:
-            mark.add(telebot.types.InlineKeyboardButton(i[0], callback_data=i[0]))
-        msg = bot.send_message(message.chat.id, "Введите свой трек", reply_markup=mark)
+        mark = generate_markup(tracks)
+        msg = bot.send_message(message.chat.id, "Выберите свой трек", reply_markup=mark)
         bot.register_next_step_handler(msg, self.track_handler)
 
     def track_handler(self, message):
         self.track = message.text
-        msg = bot.send_message(message.chat.id, "Введите вашу специализацию")
+        profs = get_proffessions()
+        mark = generate_markup(profs)
+        msg = bot.send_message(message.chat.id, "Выберите вашу специализацию", reply_markup=mark)
         bot.register_next_step_handler(msg, self.role_handler)
 
     def role_handler(self, message):
@@ -85,44 +82,19 @@ class Contact:
     
     def ed_handler(self, message):
         self.ed_place = message.text
-        bot.send_message(message.chat.id, "Регистрация окончена товарищ")
-        self.add_new_row(message)
+        bot.send_message(message.chat.id, "Регистрация окончена товарищ", reply_markup=generate_base_markup())
+        self.add_new_resident(message)
 
-    def add_new_row(self, message):
+    def add_new_resident(self, message):
         con = sqlite3.connect("TelebotDB.db")
-        print(self.name, self.surname, self.old, self.ed_place, self.role, self.rank)
-        con.execute(f"""INSERT INTO Residents ('username', 'chatid', 'name', 'surname', 'old', 'track', 'role', 'ed_place')
-                        VALUES ('{message.from_user.username}', '{message.chat.id}', '{self.name}', '{self.surname}', {self.old}, '{self.track}', '{self.role}', '{self.ed_place}')""")
+        groups = con.execute(f"SELECT id FROM Groups WHERE name in ('{self.track}', '{self.role}')").fetchall()
+        groups = tuple([i[0] for i in groups])
+        print(groups)
+        con.execute(f"""INSERT INTO Residents ('username', 'chatid', 'name', 'surname', 'old', 'track', 'role', 'ed_place', 'groups')
+                        VALUES ('{message.from_user.username}', '{message.chat.id}', '{self.name}', '{self.surname}', {self.old},
+                        (SELECT id from Tracks WHERE name = '{self.track}'),
+                        (SELECT id FROM Skills WHERE name = '{self.role}'), '{self.ed_place}', '{groups}')""")
         con.commit()
-
-
-# names = {'Zelimkhan': {'number':'89991429243',
-#                          'profession': 'Programmer',
-#                          'rank': 0,
-#                          'track': 'Innovator',
-#                          'ed_place': 'shkola',
-#                          'old': 3000},
-#         'Aishat': {'number': '89282690871',
-#                          'profession': 'Designer',
-#                          'rank': 2,
-#                          'track': 'Activist',
-#                          'ed_place': 'shkola',
-#                          'old': 22},
-#         'Samad': {'number': '89626564991',
-#                          'profession': 'Unreal Dev',
-#                          'rank': 4,
-#                          'track': 'Innovator',
-#                          'ed_place': 'shkola',
-#                          "old": 16},
-#         "Deni": {'number': '89383526230',
-#                          'profession': 'Project Manager',
-#                          'rank': 4,
-#                          'track': 'Proektirovshik',
-#                          'old': 21,
-#                          'ed_place': 'shkola'}}
-
-
-
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -146,18 +118,33 @@ def send_all_messages(message):
 @bot.message_handler(commands=['start'])
 def start_message(message):
     user = Contact()
-    bot.send_message(message.chat.id, f'''Здравствуй {message.from_user.first_name}.\n
-Я бот для рассылки сообщений.''', reply_markup=bot.markup)
-    if not get_data(f"""SELECT chatid from Residents WHERE username = '{message.from_user.username}'""").fetchall():  
+    if not get_data(f"""SELECT chatid from Residents WHERE chatid = '{message.chat.id}'""").fetchall():  
+        bot.send_message(message.chat.id, f'''Здравствуй {message.from_user.first_name}.\n
+Я бот для рассылки сообщений.''')
         msg = bot.send_message(message.chat.id, "Введи своё имя")
         bot.register_next_step_handler(msg, user.name_handler)
+    else:
+        bot.send_message(message.chat.id, f'''Здравствуй {message.from_user.first_name}.\n
+Я бот для рассылки сообщений.''', reply_markup=generate_base_markup())
 
 
+@bot.message_handler(content_types=["text"])
+def check_message(message):
+    if message.text == "Написать группе":
+        bot.register_next_step_handler(message, send_all_handler)
+        bot.send_message(message.chat.id, "Введите название группы")
+    
 
+def send_all_handler(message):
+    global id_s
+    bot.send_message(message.chat.id, "А теперь введите само сообщение")
+    ids = get_all_id_for_group(message.text)
+    bot.register_next_step_handler(message, message_handler)
+    id_s = ids
 
-# @bot.message_handler(content_types=['text'])
-# def send_message(message):
-#     bot.send_message(message.chat.id, "send_to")
+def message_handler(message):
+    for i in id_s:
+        bot.send_message(i[0], message.text)
 
 if __name__ == '__main__':
     bot.polling()
