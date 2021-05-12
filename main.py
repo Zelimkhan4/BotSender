@@ -4,15 +4,22 @@ import config
 from db_control import *
 import sqlite3
 from utils import generate_markup, generate_base_markup
-import gc
 from dotenv import load_dotenv
+import os
 
-
+load_dotenv()
+API_TOKEN = os.getenv('API_TOKEN')
 id_s = None
 
 
+GROUPS = 'Groups'
+RESIDENTS = 'Residents'
+SKILLS = 'Skills'
+TRACKS = 'Tracks'
+
+
 # Класс бота
-class Bot(telebot.TeleBot):
+class Bot(telebot.  TeleBot):
     def __init__(self, apikey):
         super().__init__(apikey)
         self.name = "бот для рассылки"
@@ -22,7 +29,7 @@ class Bot(telebot.TeleBot):
         self.data = {}
     
 
-bot = Bot(config.apikey)
+bot = Bot(API_TOKEN)
 
 
 # Класс группы
@@ -159,4 +166,5 @@ def message_handler(message):
         bot.send_message(i[0], message.text)
 
 if __name__ == '__main__':
+    global_init('TeleBotDB.db')
     bot.polling()
