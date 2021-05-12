@@ -5,6 +5,7 @@ from db_control import *
 import sqlite3
 from utils import generate_markup, generate_base_markup
 import gc
+from dotenv import load_dotenv
 
 
 id_s = None
