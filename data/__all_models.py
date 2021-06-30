@@ -10,7 +10,7 @@ class Resident(SqlAlchemyBase):
     surname = sa.Column(sa.String)
     track = sa.Column(sa.String)
     skill = sa.Column(sa.String)
-    groups = sa.Column(sa.String)
+    groups = sa.Column(sa.String, default="")
 
 
 class Group(SqlAlchemyBase):

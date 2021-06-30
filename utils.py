@@ -3,9 +3,8 @@ from telebot import types
 
 def generate_markup(data):
     markup = types.ReplyKeyboardMarkup(one_time_keyboard=1)
-    print(data)
     for but in data:
-        markup.add(but[1])
+        markup.add(but[0])
     return markup
     
 

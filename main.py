@@ -1,84 +1,44 @@
 import telebot
 from telebot import types
 from data import db_session
+from data.__all_models import Resident, Group
 from utils import generate_markup, generate_base_markup
-from sqlalchemy.orm import mapper
+from sqlalchemy.orm import create_session, mapper
 import sqlalchemy as sa
 
 
 API_TOKEN = "1115601017:AAHeOre5a62sLGhNbqVdv_8IQ_fQA9rZdTs"
-
-
-GROUPS = 'Groups'
-RESIDENTS = 'Residents'
-SKILLS = 'Skills'
-TRACKS = 'Tracks'
-
-
-class Residents:
-    id = sa.Column("id", sa.Integer, primary_key=True)
-    pass
-
-class Tracks:
-    pass
-
-class Skills:
-    pass
-
-class Groups:
-    pass
-
-
-
-
-
-
-
 bot = telebot.TeleBot(API_TOKEN)
 
 
-def phone_handler(message, Resident):
-    Resident.phone = message.text
-    msg = bot.send_message(message.chat.id, "Регистрация прошла успешно")
-    Resident.chatid = message.chat.id
-    Resident.username = message.from_user.username
-    sess = create_session()
-    sess.add(Resident)
-    sess.commit()
-
-
-
-
-def ed_handler(message, Resident):
-    Resident.ed_place = message.text
-    msg = bot.send_message(message.chat.id, "Введите ваш номер телефона")
-    bot.register_next_step_handler(msg, phone_handler, Resident)
-
-
 def skill_handler(message, Resident):
-    Resident.role = message.chat.id
-    msg = bot.send_message(message.chat.id, "Введите место вашего обучения")
-    bot.register_next_step_handler(msg, ed_handler, Resident)
+    sess = db_session.create_session()
+    skill_id = sess.query(Group.id).filter(Group.name == message.text).first()[0] 
+    Resident.skill = skill_id
+    Resident.groups += f",{skill_id}"
+    msg = bot.send_message(message.chat.id, "Регистрация окончена!")
+    Resident.chat_id = message.chat.id
+    sess.add(Resident)
+    sess.commit()    
+
 
 def track_handler(message, Resident):
-    Resident.track = message.text
-    sess = create_session()
-    keyboard = generate_markup(sess.query(METADATA.tables["Skills"]).all())
+    sess = db_session.create_session()
+    track_id = sess.query(Group.id).filter(Group.name == message.text).first()[0]
+    Resident.track = track_id
+    Resident.groups += f",{track_id}"
+    keyboard = generate_markup(sess.query(Group.name).filter(Group.id > 4, Group.id < 10).all())
     msg = bot.send_message(message.chat.id, "Выберите вашу роль", reply_markup=keyboard)
     bot.register_next_step_handler(msg, skill_handler, Resident)
 
 
-def age_handler(message, Resident):
-    Resident.old = message.text
-    sess = create_session()
-    keyboard = generate_markup(sess.query(METADATA.tables["Tracks"]).all())
-    msg = bot.send_message(message.chat.id, "Выбери трек", reply_markup=keyboard)
-    bot.register_next_step_handler(msg, track_handler, Resident)
-
 def surname_handler(message, Resident):
     Resident.surname = message.text
-    msg = bot.send_message(message.chat.id, "Ваш возраст")
-    bot.register_next_step_handler(msg, age_handler, Resident)
+    sess = db_session.create_session()
+    groups = sess.query(Group.name).filter(Group.id > 0, Group.id < 5).all()
+    keyboard = generate_markup(groups)
+    msg = bot.send_message(message.chat.id, "Выберите трек", reply_markup=keyboard)
+    bot.register_next_step_handler(msg, track_handler, Resident)
 
 
 def name_handler(message, Resident):
@@ -87,49 +47,19 @@ def name_handler(message, Resident):
     bot.register_next_step_handler(msg, surname_handler, Resident)
 
 
-
-
-
 @bot.message_handler(commands=['start'])
 def start_message(message):
-    user_chat_id = message.chat.id
-    sess = create_session()
-    bot.send_message(message.chat.id, f'''Здравствуй {message.from_user.first_name}.\n
-Я бот для рассылки сообщений.''')
-    if not user_chat_id in sess.query(METADATA.tables.get('Residents')).all():
+    sess = db_session.create_session()
+    if not sess.query(Resident).filter(Resident.chat_id == message.chat.id).first():
         msg = bot.send_message(message.chat.id, "Введи своё имя")
-        new_resident = Residents()
+        new_resident = Resident()
+        new_resident.groups = ""
         bot.register_next_step_handler(msg, name_handler, new_resident)
     else:
         bot.send_message(message.chat.id, f'''Здравствуй {message.from_user.first_name}.\n
 Я бот для рассылки сообщений.''', reply_markup=generate_base_markup())
 
 
-@bot.message_handler(content_types=["text"])
-def check_message(message):
-    if message.text == "Написать группе":
-        markup = types.ReplyKeyboardMarkup()
-        for i in get_all_groups():
-            button = types.KeyboardButton(text=i[0])
-            markup.add(button)
-        bot.register_next_step_handler(message, send_all_handler)
-        bot.send_message(message.chat.id, "Выберите группу", reply_markup=markup)
-    elif message.text == "Добавить группу":
-        bot.send_message(message.chat.id, "Отлично введите название группы")
-        group = Group()
-        bot.register_next_step_handler(message, group.name_of_creating_group_handler)
-
-
-def send_all_handler(message):
-    global id_s
-    bot.send_message(message.chat.id, "А теперь введите само сообщение", reply_markup=generate_base_markup())
-    ids = get_all_id_for_group(message.text)
-    bot.register_next_step_handler(message, message_handler)
-    id_s = ids
-
-def message_handler(message):
-    for i in id_s:
-        bot.send_message(i[0], message.text)
 
 if __name__ == '__main__':
     db_session.global_init("TeleBot.db")
