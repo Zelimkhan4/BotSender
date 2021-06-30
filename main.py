@@ -1,6 +1,6 @@
 import telebot
 from telebot import types
-from db_control import *
+from data import db_session
 from utils import generate_markup, generate_base_markup
 from sqlalchemy.orm import mapper
 import sqlalchemy as sa
@@ -132,8 +132,7 @@ def message_handler(message):
         bot.send_message(i[0], message.text)
 
 if __name__ == '__main__':
-    global_init("TeleBotDB.db")   
-    mapper(Residents ,METADATA.tables.get("Residents"))
+    db_session.global_init("TeleBot.db")
     bot.polling()
 
 
