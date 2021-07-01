@@ -12,7 +12,6 @@ BUFFER = set()
 
 def send_message_handler(message):
     global BUFFER
-    print(BUFFER)
     for chat_id in BUFFER:
         bot.send_message(chat_id, message.text)
     BUFFER.clear()
@@ -22,18 +21,27 @@ def name_search_handler(message):
     name, surname = message.text.split(" ")
     sess = db_session.create_session()
     humans = [(f"{i.name} {i.surname}", i.chat_id) for i in sess.query(Resident).filter(sa.or_(Resident.name == name.lower().capitalize(), Resident.surname == surname.lower().capitalize()))]
-    markup = generate_inline_markup(humans)
-    msg = bot.send_message(message.chat.id, "Результат поиска", reply_markup=markup)
-    bot.register_next_step_handler(msg, send_message_handler)
+    if humans:
+        markup = generate_inline_markup(humans)
+        msg = bot.send_message(message.chat.id, "Результат поиска", reply_markup=markup)
+        bot.register_next_step_handler(msg, send_message_handler)
+        return
+    bot.send_message(message.chat.id, "Записей таковых не найдено")
 
 
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline_call(call):
     global BUFFER
-    msg = None
+
+
+    # Особый случай, ввод имени и фамилии
     if call.data == "Name":
         msg = bot.send_message(call.message.chat.id, "Введите имя и фамилию через пробел")
+        bot.register_next_step_handler(msg, name_search_handler)
+        return
+
+    # Написание группе
     elif call.data in ("Role", "Track", "Group"):
         sess = db_session.create_session()
         if call.data == "Role":
@@ -42,15 +50,21 @@ def callback_inline_call(call):
             groups = generate_inline_markup([(i.name, f"Group:{i.id}") for i in sess.query(Group).filter(Group.id > 0, Group.id < 5)])
         else:
             groups = generate_inline_markup([(i.name, f"Group:{i.id}") for i in sess.query(Group).filter(Group.id > 8)])
-        msg = bot.send_message(call.message.chat.id, "Роль выбери ле!", reply_markup=groups)
-        bot.register_next_step_handler(msg, send_message_handler)
-        return
+        msg = bot.send_message(call.message.chat.id, "А теперь выбери группу", reply_markup=groups)
+
+
+    # Написание всем
     elif call.data == "All":
-        pass
-    # Обычный резидент 
+        sess = db_session.create_session()
+        for res in sess.query(Resident.chat_id).all():
+            BUFFER.add(res)
+
+
+
+    # Обычный резидент
     elif call.data.isdigit():
-        BUFFER.add(call.data) 
-    
+        BUFFER.add(call.data)
+
     # Группа в формате "Group:{id}"
     elif call.data.startswith("Group"):
         group_id = int(call.data.split(":")[1])
@@ -58,10 +72,9 @@ def callback_inline_call(call):
         for i in sess.query(Resident).all():
             if i.groups.find(f"{group_id}") != -1:
                 BUFFER.add(i.chat_id)
-    else: 
-        return
-    if msg is not None:
-        bot.register_next_step_handler(msg, name_search_handler)
+
+    msg = bot.send_message(call.message.chat.id, "Insert Text")
+    bot.register_next_step_handler(msg, send_message_handler)
 
 
 
