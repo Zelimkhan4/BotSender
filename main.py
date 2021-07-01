@@ -14,20 +14,24 @@ def send_message_handler(message):
     global BUFFER
     for chat_id in BUFFER:
         bot.send_message(chat_id, message.text)
-    BUFFER.clear()
+    BUFFER = set()
+
 
 
 def name_search_handler(message):
-    name, surname = message.text.split(" ")
-    sess = db_session.create_session()
-    humans = [(f"{i.name} {i.surname}", i.chat_id) for i in sess.query(Resident).filter(sa.or_(Resident.name == name.lower().capitalize(), Resident.surname == surname.lower().capitalize()))]
-    if humans:
-        markup = generate_inline_markup(humans)
-        msg = bot.send_message(message.chat.id, "Результат поиска", reply_markup=markup)
-        bot.register_next_step_handler(msg, send_message_handler)
+    if (message.text.count(" ") == 1):
+        name, surname = message.text.split(" ")
+        sess = db_session.create_session()
+        humans = [(f"{i.name} {i.surname}", i.chat_id) for i in sess.query(Resident).filter(sa.or_(Resident.name == name.lower().capitalize(), Resident.surname == surname.lower().capitalize()))]
+        if humans:
+            markup = generate_inline_markup(humans)
+            msg = bot.send_message(message.chat.id, "Результат поиска", reply_markup=markup)
+            bot.register_next_step_handler(msg, send_message_handler)
+            return
+        bot.send_message(message.chat.id, "Записей таковых не найдено")
         return
-    bot.send_message(message.chat.id, "Записей таковых не найдено")
-
+    msg = bot.send_message(message.chat.id, "Неправильный формат, попробуйте снова")
+    bot.register_next_step_handler(msg, name_search_handler)
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -57,13 +61,17 @@ def callback_inline_call(call):
     elif call.data == "All":
         sess = db_session.create_session()
         for res in sess.query(Resident.chat_id).all():
-            BUFFER.add(res)
+            BUFFER.add(res[0])
+        msg = bot.send_message(call.message.chat.id, "Введите сообщение")
+
 
 
 
     # Обычный резидент
     elif call.data.isdigit():
         BUFFER.add(call.data)
+        return
+
 
     # Группа в формате "Group:{id}"
     elif call.data.startswith("Group"):
@@ -72,9 +80,8 @@ def callback_inline_call(call):
         for i in sess.query(Resident).all():
             if i.groups.find(f"{group_id}") != -1:
                 BUFFER.add(i.chat_id)
-
-    msg = bot.send_message(call.message.chat.id, "Insert Text")
-    bot.register_next_step_handler(msg, send_message_handler)
+        return
+    bot.register_next_step_handler(call.message, send_message_handler)
 
 
 
